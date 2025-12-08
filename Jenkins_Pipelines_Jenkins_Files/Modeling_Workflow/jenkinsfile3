@@ -41,7 +41,8 @@ pipeline {
                     string(name: 'TARGET_ENVIRONMENT', defaultValue: 'PROD', description: 'Target deployment environment')
                 }
             }
-                           echo "Deploying release ${RELEASE} to environment ${TARGET_ENVIRONMENT}"
+            steps {
+                echo "Deploying release ${RELEASE} to environment ${TARGET_ENVIRONMENT}"
             }
         }        
     }
