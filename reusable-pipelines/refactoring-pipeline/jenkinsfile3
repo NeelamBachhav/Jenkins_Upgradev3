@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -9,13 +10,14 @@ pipeline {
         RELEASE_VERSION = '1.1.0'
         INT_VERSION = 'R2'
     }
+
     stages {
         stage('Audit tools') {
             steps {
                 bat '''
-                  git version
-                  java -version
-                  mvn -version
+                    git --version
+                    java -version
+                    mvn -version
                 '''
             }
         }
@@ -24,7 +26,7 @@ pipeline {
             steps {
                 dir('./java-tomcat-sample') {
                     bat '''
-                        echo "Executing Unit Tests..."
+                        echo Executing Unit Tests...
                         mvn test
                     '''
                 }
@@ -33,17 +35,23 @@ pipeline {
 
         stage('Build') {
             environment {
-                VERSION_SUFFIX = "${sh(script:'if [ "${RELEASE}" = false ] ; then echo -n "${INT_VERSION}"ci:"${BUILD_NUMBER}"; else echo -n "${RELEASE_VERSION}":"${BUILD_NUMBER}"; fi', returnStdout: true)}"
+                VERSION_SUFFIX = "${bat(script: '''
+                    IF "%RELEASE%"=="false" (
+                        echo %INT_VERSION%ci:%BUILD_NUMBER%
+                    ) ELSE (
+                        echo %RELEASE_VERSION%:%BUILD_NUMBER%
+                    )
+                ''', returnStdout: true).trim()}"
             }
             steps {
                 echo "Building version: ${INT_VERSION} with suffix: ${VERSION_SUFFIX}"
                 echo 'Mention your Application Build Code here!!!'
                 dir('./java-tomcat-sample') {
-                        bat '''
-                            mvn versions:set -DnewVersion="${VERSION_SUFFIX}"-SNAPSHOT
-                            mvn versions:update-child-modules
-                            mvn clean package
-                        '''
+                    bat '''
+                        mvn versions:set -DnewVersion=%VERSION_SUFFIX%-SNAPSHOT
+                        mvn versions:update-child-modules
+                        mvn clean package
+                    '''
                 }
             }
         }
@@ -52,7 +60,6 @@ pipeline {
             when {
                 expression { return params.RELEASE }
             }
-
             steps {
                 archiveArtifacts('**/*.war')
             }
@@ -65,3 +72,4 @@ pipeline {
         }
     }
 }
+
