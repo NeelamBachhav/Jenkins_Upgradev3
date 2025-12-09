@@ -36,14 +36,12 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    // Compute VERSION_SUFFIX dynamically
                     if (params.RELEASE) {
                         env.VERSION_SUFFIX = "${env.RELEASE_VERSION}:${env.BUILD_NUMBER}"
                     } else {
                         env.VERSION_SUFFIX = "${env.INT_VERSION}ci:${env.BUILD_NUMBER}"
                     }
                 }
-
                 echo "Building version: ${env.INT_VERSION} with suffix: ${env.VERSION_SUFFIX}"
                 dir('./java-tomcat-sample') {
                     bat """
@@ -60,7 +58,7 @@ pipeline {
                 expression { return params.RELEASE }
             }
             steps {
-                archiveArtifacts('**/*.war')
+                archiveArtifacts artifacts: 'java-tomcat-sample/target/*.war', fingerprint: true
             }
         }
     }
@@ -71,5 +69,6 @@ pipeline {
         }
     }
 }
+
 
 
