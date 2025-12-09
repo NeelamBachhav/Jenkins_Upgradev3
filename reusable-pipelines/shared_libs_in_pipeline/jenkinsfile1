@@ -1,26 +1,15 @@
+library identifier: 'Jenkins_Pipeline_Shared_Libs@main',
+        retriever: modernSCM([$class: 'GitSCMSource', remote: 'https://github.com/NeelamBachhav/Jenkins_Pipeline_Shared_Libs-main.git'])
 
 pipeline {
     agent any
-
     stages {
-        stage('Load Shared Library') {
-            steps {
-                script {
-                    library identifier: 'Jenkins_Pipeline_Shared_Libs@main',
-                            retriever: modernSCM([$class: 'GitSCMSource', remote: 'https://github.com/NeelamBachhav/Jenkins_Pipeline_Shared_Libs-main.git'])
-                }
-            }
-        }
-
         stage('Audit tools') {
             steps {
-                script {
-                    auditTools() // Calls the shared library function
-                }
+                auditTools()
             }
         }
     }
-}
 
 
 
