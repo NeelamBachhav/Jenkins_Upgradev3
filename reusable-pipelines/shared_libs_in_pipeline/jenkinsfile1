@@ -15,11 +15,12 @@ pipeline {
         stage('Audit tools') {
             steps {
                 script {
-                    auditTools() // This function must exist in vars/auditTools.groovy in your shared lib
+                    auditTools() // Calls the shared library function
                 }
             }
         }
     }
 }
+
 
 
