@@ -1,4 +1,4 @@
-convert into windows batch commands pipeline {
+pipeline {
     agent any
 
     parameters {
