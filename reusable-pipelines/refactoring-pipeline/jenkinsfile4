@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -9,10 +10,13 @@ pipeline {
         RELEASE_VERSION = '1.1.0'
         INT_VERSION = 'R2'
     }
+
     stages {
         stage('Audit tools') {
             steps {
-                auditTools()
+                script {
+                    auditTools()
+                }
             }
         }
 
@@ -20,7 +24,7 @@ pipeline {
             steps {
                 dir('./java-tomcat-sample') {
                     bat '''
-                        echo "Executing Unit Tests..."
+                        echo Executing Unit Tests...
                         mvn test
                     '''
                 }
@@ -28,25 +32,30 @@ pipeline {
         }
 
         stage('Build') {
-            environment {
-                VERSION_SUFFIX = getBuildVersion()
-            }
             steps {
-                echo "Building version: ${INT_VERSION} with suffix: ${VERSION_SUFFIX}"
-                echo 'Mention your Application Build Code here!!!'
+                script {
+                    env.VERSION_SUFFIX = getBuildVersion()
+                }
+                echo "Building version: ${env.INT_VERSION} with suffix: ${env.VERSION_SUFFIX}"
                 dir('./java-tomcat-sample') {
-                    packageApplication()
+                    script {
+                        packageApplication()
+                    }
                 }
             }
         }
 
         stage('Publish') {
-            // when {
-            //     expression { return params.RELEASE }
-            // }
-
             steps {
-                archiveArtifacts('**/*.war')
+                script {
+                    def warFile = 'java-tomcat-sample/target/*.war'
+                    if (fileExists('java-tomcat-sample/target')) {
+                        archiveArtifacts artifacts: warFile, fingerprint: true
+                        echo "WAR file archived successfully."
+                    } else {
+                        echo "No WAR file found. Skipping artifact archiving."
+                    }
+                }
             }
         }
     }
@@ -58,17 +67,18 @@ pipeline {
     }
 }
 
+// ✅ Custom Groovy methods wrapped for Windows batch commands
 String getBuildVersion() {
     if (params.RELEASE) {
-        return env.RELEASE_VERSION + ':' + env.BUILD_NUMBER
+        return "${env.RELEASE_VERSION}:${env.BUILD_NUMBER}"
     } else {
-        return env.INT_VERSION + '+ci:' + env.BUILD_NUMBER
+        return "${env.INT_VERSION}ci:${env.BUILD_NUMBER}"
     }
 }
 
 void auditTools() {
     bat '''
-        git version
+        git --version
         java -version
         mvn -version
     '''
@@ -76,9 +86,10 @@ void auditTools() {
 
 void packageApplication() {
     bat '''
-        mvn versions:set -DnewVersion="${VERSION_SUFFIX}"-SNAPSHOT
+        mvn versions:set -DnewVersion=%VERSION_SUFFIX%-SNAPSHOT
         mvn versions:update-child-modules
         mvn clean package
     '''
 }
+
 
