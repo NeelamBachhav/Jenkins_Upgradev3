@@ -1,5 +1,4 @@
-
-pipeline {
+convert into windows batch commands pipeline {
     agent any
 
     parameters {
@@ -10,15 +9,10 @@ pipeline {
         RELEASE_VERSION = '1.1.0'
         INT_VERSION = 'R2'
     }
-
     stages {
         stage('Audit tools') {
             steps {
-                bat '''
-                    git --version
-                    java -version
-                    mvn -version
-                '''
+                auditTools()
             }
         }
 
@@ -26,7 +20,7 @@ pipeline {
             steps {
                 dir('./java-tomcat-sample') {
                     bat '''
-                        echo Executing Unit Tests...
+                        echo "Executing Unit Tests..."
                         mvn test
                     '''
                 }
@@ -34,36 +28,25 @@ pipeline {
         }
 
         stage('Build') {
+            environment {
+                VERSION_SUFFIX = getBuildVersion()
+            }
             steps {
-                script {
-                    if (params.RELEASE) {
-                        env.VERSION_SUFFIX = "${env.RELEASE_VERSION}:${env.BUILD_NUMBER}"
-                    } else {
-                        env.VERSION_SUFFIX = "${env.INT_VERSION}ci:${env.BUILD_NUMBER}"
-                    }
-                }
-                echo "Building version: ${env.INT_VERSION} with suffix: ${env.VERSION_SUFFIX}"
+                echo "Building version: ${INT_VERSION} with suffix: ${VERSION_SUFFIX}"
+                echo 'Mention your Application Build Code here!!!'
                 dir('./java-tomcat-sample') {
-                    bat """
-                        mvn versions:set -DnewVersion=${env.VERSION_SUFFIX}-SNAPSHOT
-                        mvn versions:update-child-modules
-                        mvn clean package
-                    """
+                    packageApplication()
                 }
             }
         }
 
         stage('Publish') {
+            // when {
+            //     expression { return params.RELEASE }
+            // }
+
             steps {
-                script {
-                    def warFile = 'java-tomcat-sample/target/*.war'
-                    if (fileExists('java-tomcat-sample/target')) {
-                        archiveArtifacts artifacts: warFile, fingerprint: true
-                        echo "WAR file archived successfully."
-                    } else {
-                        echo "No WAR file found. Skipping artifact archiving."
-                    }
-                }
+                archiveArtifacts('**/*.war')
             }
         }
     }
@@ -73,5 +56,29 @@ pipeline {
             cleanWs()
         }
     }
+}
+
+String getBuildVersion() {
+    if (params.RELEASE) {
+        return env.RELEASE_VERSION + ':' + env.BUILD_NUMBER
+    } else {
+        return env.INT_VERSION + '+ci:' + env.BUILD_NUMBER
+    }
+}
+
+void auditTools() {
+    bat '''
+        git version
+        java -version
+        mvn -version
+    '''
+}
+
+void packageApplication() {
+    bat '''
+        mvn versions:set -DnewVersion="${VERSION_SUFFIX}"-SNAPSHOT
+        mvn versions:update-child-modules
+        mvn clean package
+    '''
 }
 
