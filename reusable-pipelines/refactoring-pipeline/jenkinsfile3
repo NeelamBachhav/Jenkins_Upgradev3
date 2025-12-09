@@ -1,4 +1,5 @@
 
+
 pipeline {
     agent any
 
@@ -58,7 +59,15 @@ pipeline {
                 expression { return params.RELEASE }
             }
             steps {
-                archiveArtifacts artifacts: 'java-tomcat-sample/target/*.war', fingerprint: true
+                script {
+                    def warFile = 'java-tomcat-sample/target/*.war'
+                    if (fileExists('java-tomcat-sample/target')) {
+                        archiveArtifacts artifacts: warFile, fingerprint: true
+                        echo "WAR file archived successfully."
+                    } else {
+                        echo "No WAR file found. Skipping artifact archiving."
+                    }
+                }
             }
         }
     }
@@ -69,6 +78,7 @@ pipeline {
         }
     }
 }
+
 
 
 
