@@ -1,67 +1,83 @@
+
 pipeline {
-    agent {
-        docker {
-            image 'maven:latest'
-            args '-u root'
-        }
-    }
-    
-    environment {
-      VERSION = '0.1.0'
-      RELEASE_VERSION = 'R.2'
+  agent any  // Runs on a Windows node (controller or agent)
+
+  options {
+    timestamps()
+    ansiColor('xterm')
+  }
+
+  environment {
+    VERSION = '0.1.0'
+    RELEASE_VERSION = 'R.2'
+    // Optional: If you have explicit installations, set and use these:
+    // JAVA_HOME = 'C:\\Program Files\\Java\\jdk-17'
+    // MAVEN_HOME = 'C:\\apache-maven-3.9.9'
+  }
+
+  stages {
+    stage('Audit tools') {
+      steps {
+        // If you set JAVA_HOME/MAVEN_HOME above, uncomment to prepend to PATH:
+        // bat 'set PATH=%JAVA_HOME%\\bin;%MAVEN_HOME%\\bin;%PATH%'
+
+        bat '''
+          echo Checking Java & Maven versions...
+          java -version
+          mvn -version
+
+          echo Dumping Windows environment variables...
+          set
+
+          echo Listing workspace contents...
+          dir "%WORKSPACE%"
+        '''
+      }
     }
 
-    stages {
-      stage('Audit tools') {
-        steps {
+    stage('Unit Test') {
+      steps {
+        dir('java-tomcat-sample') {
           bat '''
-              java -version
-              mvn -version
+            echo Executing Unit Tests...
+            mvn -B test
           '''
-          bat 'printenv'
-          bat 'ls -l $WORKSPACE'
         }
       }
-
-      stage('Unit Test') {
-        steps {
-          dir('./java-tomcat-sample') {
-            bat '''
-              echo "Executing Unit Tests..."
-              mvn test
-          '''
-          }
-        }
-      }
-
-      stage('Build') {
-        steps {
-          echo "Building version: ${VERSION} with suffix: ${RELEASE_VERSION}"
-          echo 'Mention your Application Build Code here!!!'
-          bat 'mvn -f java-tomcat-sample/pom.xml clean package'
+      post {
+        always {
+          // Publish JUnit reports if present
+          junit testResults: 'java-tomcat-sample/target/surefire-reports/*.xml', allowEmptyResults: true
         }
       }
     }
+
+    stage('Build') {
+      steps {
+        echo "Building version: ${VERSION} with suffix: ${RELEASE_VERSION}"
+        echo 'Mention your Application Build Code here!!!'
+        bat 'mvn -B -f "java-tomcat-sample/pom.xml" clean package'
+      }
+    }
+
+    stage('Archive Artifact') {
+      steps {
+        // Adjust pattern based on your packaging (.war or .jar)
+        archiveArtifacts artifacts: 'java-tomcat-sample/target/*.war', fingerprint: true, allowEmptyArchive: true
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Build completed successfully.'
+    }
+    failure {
+      echo 'Build failed—see logs above.'
+    }
+    always {
+      // Helpful for debugging Windows file paths/permissions
+      bat 'dir /s /b "java-tomcat-sample\\target"'
+    }
+  }
 }
-
-
-
-/*
-Requirements -- 
-
-1. Jenkins Docker PlugIns
-    - Docker
-    - Docker Pipeline
-
-2. Install Docker Engine on Execution machine
-   Link -- https://docs.docker.com/engine/install/
-
-3. Add Jenkins User to Group
-   sudo usermod -a -G docker jenkins
-
-4. Reboot your Machine
-   reboot
-
-5. Execute Docker using root User-
-   args '-u root'
-*/
