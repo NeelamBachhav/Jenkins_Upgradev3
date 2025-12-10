@@ -14,19 +14,19 @@ pipeline {
     stages {
       stage('Audit tools') {
         steps {
-          sh '''
+          bat '''
               java -version
               mvn -version
           '''
-          sh 'printenv'
-          sh 'ls -l $WORKSPACE'
+          bat 'printenv'
+          bat 'ls -l $WORKSPACE'
         }
       }
 
       stage('Unit Test') {
         steps {
           dir('./java-tomcat-sample') {
-            sh '''
+            bat '''
               echo "Executing Unit Tests..."
               mvn test
           '''
@@ -38,7 +38,7 @@ pipeline {
         steps {
           echo "Building version: ${VERSION} with suffix: ${RELEASE_VERSION}"
           echo 'Mention your Application Build Code here!!!'
-          sh 'mvn -f java-tomcat-sample/pom.xml clean package'
+          bat 'mvn -f java-tomcat-sample/pom.xml clean package'
         }
       }
     }
